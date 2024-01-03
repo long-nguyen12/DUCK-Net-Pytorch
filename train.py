@@ -11,7 +11,7 @@ import os
 import time
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
-
+from val import evaluate
 from tqdm import tqdm
 
 PALETTE = [[0, 0, 0], [255, 255, 255]]
@@ -64,7 +64,7 @@ class PolypDB(Dataset):
         self.ignore_label = -1
 
         img_path = Path(root) / "images"
-        self.files = list(img_path.glob("*.png"))
+        self.files = list(img_path.glob("*.jpg"))
 
         if not self.files:
             raise Exception(f"No images found in {img_path}")
@@ -127,7 +127,7 @@ def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count()):
     return dataloader, dataset
 
 
-def main(cfg, save_dir, train_loader, val_loader):
+def main(save_dir, train_loader, val_loader):
     start = time.time()
     best_mIoU = 0.0
     device = torch.device("cuda")
@@ -155,38 +155,18 @@ def main(cfg, save_dir, train_loader, val_loader):
         )
 
         for iter, (img, lbl) in pbar:
+            optimizer.zero_grad(set_to_none=True)
 
-            for rate in size_rates:
-                optimizer.zero_grad(set_to_none=True)
+            img = img.to(device)
+            lbl = lbl.to(device)
+            
+            logits = model(img)
+            loss = dice_metric_loss(logits, lbl)
+            loss.backward()
 
-                img = img.to(device)
-                lbl = lbl.to(device)
+            loss_record.update(loss.data, 8)
 
-                trainsize = int(352 * rate)
-                if rate != 1:
-                    if lbl.shape[1] != 1:
-                        lbl = lbl.unsqueeze(1).float()
-                    img = F.interpolate(
-                        img,
-                        size=(trainsize, trainsize),
-                        mode="bicubic",
-                        align_corners=True,
-                    )
-                    lbl = F.interpolate(
-                        lbl,
-                        size=(trainsize, trainsize),
-                        mode="bicubic",
-                        align_corners=True,
-                    )
-
-                logits = model(img)
-                loss = dice_metric_loss(logits, lbl)
-                loss.backward()
-
-                if rate == 1:
-                    loss_record.update(loss.data, 8)
-
-                optimizer.step()
+            optimizer.step()
 
             train_loss = loss.data
 
@@ -215,11 +195,11 @@ def main(cfg, save_dir, train_loader, val_loader):
 
 
 if __name__ == "__main__":
-    ds = ['CVC-ClinicDB', 'CVC-ColonDB', 'ETIS-LaribPolypDB', 'Kvasir-SEG']
+    ds = ["CVC-ClinicDB", "CVC-ColonDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
     # ds = ["PolypGen"]
     for _ds in ds:
         print(_ds)
-        save_path = f"resu/ts/DUCK-Net/{_ds}"
+        save_path = f"results/DUCK-Net/{_ds}"
         save_dir = Path(save_path)
         save_dir.mkdir(exist_ok=True)
 
