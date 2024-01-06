@@ -100,24 +100,34 @@ class PolypDB(Dataset):
             return image.float(), mask.argmax(dim=2).long()
 
         else:
-            return image.float(), mask.argmax(dim=2).long()
+            return image.float() / 255.0, mask.argmax(dim=2).long()
 
 
-def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count()):
+def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count(), type='train'):
     if isinstance(image_size, int):
         image_size = [image_size, image_size]
 
-    transform = A.Compose(
-        [
-            A.Resize(height=image_size[0], width=image_size[1]),
-            A.VerticalFlip(),
-            A.ColorJitter(brightness=(0.6,1.6), contrast=0.2, saturation=0.1, hue=0.01, always_apply=True),
-            A.Affine(scale=(0.5,1.5), translate_percent=(-0.125,0.125), rotate=(-180,180), shear=(-22.5,22), always_apply=True),
-            ToTensorV2(),
-        ]
-    )
-
+    if type == 'train':
+        transform = A.Compose(
+            [
+                A.Resize(height=image_size[0], width=image_size[1]),
+                A.VerticalFlip(),
+                A.ColorJitter(brightness=(0.6,1.6), contrast=0.2, saturation=0.1, hue=0.01, always_apply=True),
+                A.Affine(scale=(0.5,1.5), translate_percent=(-0.125,0.125), rotate=(-180,180), shear=(-22.5,22), always_apply=True),
+                # A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
+            ]
+        )
+    else:
+        transform = A.Compose(
+            [
+                A.Resize(height=image_size[0], width=image_size[1]),
+                ToTensorV2(),
+            ]
+        )
+    
     dataset = PolypDB(root=dir, transform=transform)
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
@@ -206,8 +216,8 @@ if __name__ == "__main__":
         save_dir.mkdir(exist_ok=True)
 
         train_path = f"data/Datasets/{_ds}/train/"
-        train_loader, dataset = create_dataloaders(train_path, [352, 352], 4, True)
+        train_loader, dataset = create_dataloaders(train_path, [352, 352], 4, True, 'train')
         val_path = f"data/Datasets/{_ds}/validation/"
-        val_loader, dataset = create_dataloaders(val_path, [352, 352], 1, False)
+        val_loader, dataset = create_dataloaders(val_path, [352, 352], 1, False, 'val')
 
         main(save_dir, train_loader, val_loader)

@@ -218,54 +218,54 @@ class MidScope_Conv(nn.Module):
 class WideScope_Conv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(WideScope_Conv, self).__init__()
-        self.conv33_1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            bias=False,
-            dilation=1,
-            padding="same",
-        )
-        self.conv33_2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            padding="same",
-            bias=False,
-            dilation=2,
-        )
-        self.conv33_3 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            padding="same",
-            bias=False,
-            dilation=3,
-        )
-        # self.conv33_1 = Conv2dSamePadding(
+        # self.conv33_1 = nn.Conv2d(
         #     in_channels,
         #     out_channels,
         #     kernel_size=3,
         #     stride=1,
+        #     bias=False,
         #     dilation=1,
+        #     padding="same",
         # )
-        # self.conv33_2 = Conv2dSamePadding(
+        # self.conv33_2 = nn.Conv2d(
         #     out_channels,
         #     out_channels,
         #     kernel_size=3,
         #     stride=1,
+        #     padding="same",
+        #     bias=False,
         #     dilation=2,
         # )
-        # self.conv33_3 = Conv2dSamePadding(
+        # self.conv33_3 = nn.Conv2d(
         #     out_channels,
         #     out_channels,
         #     kernel_size=3,
         #     stride=1,
+        #     padding="same",
+        #     bias=False,
         #     dilation=3,
         # )
+        self.conv33_1 = Conv2dSamePadding(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            dilation=1,
+        )
+        self.conv33_2 = Conv2dSamePadding(
+            out_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            dilation=2,
+        )
+        self.conv33_3 = Conv2dSamePadding(
+            out_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            dilation=3,
+        )
         self.act = nn.ReLU(inplace=True)
         self.norm = nn.BatchNorm2d(out_channels)
 

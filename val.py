@@ -38,7 +38,7 @@ def evaluate(model, dataloader, device, folder):
         labels = labels.to(device)
         preds = model(images)
         # preds = torch.sigmoid(preds)
-        # preds = (preds > 0.5).float()
+        preds = (preds > 0.5)
 
         metrics.update(preds, labels)
 
