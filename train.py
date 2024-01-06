@@ -13,6 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 from val import evaluate
 from tqdm import tqdm
+from PIL import Image
 
 PALETTE = [[0, 0, 0], [255, 255, 255]]
 
@@ -90,11 +91,11 @@ class PolypDB(Dataset):
         mask = cv2.imread(lbl_path)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
         mask = self.convert_to_mask(mask)
-
+        
         if self.transform is not None:
             transformed = self.transform(image=image, mask=mask)
 
-            image = transformed["image"]
+            image = transformed["image"] / 255.0
             mask = transformed["mask"]
             return image.float(), mask.argmax(dim=2).long()
 
@@ -109,8 +110,9 @@ def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count()):
     transform = A.Compose(
         [
             A.Resize(height=image_size[0], width=image_size[1]),
-            A.HorizontalFlip(p=0.5),
-            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            A.VerticalFlip(),
+            A.ColorJitter(brightness=(0.6,1.6), contrast=0.2, saturation=0.1, hue=0.01, always_apply=True),
+            A.Affine(scale=(0.5,1.5), translate_percent=(-0.125,0.125), rotate=(-180,180), shear=(-22.5,22), always_apply=True),
             ToTensorV2(),
         ]
     )
@@ -133,17 +135,16 @@ def main(save_dir, train_loader, val_loader):
     device = torch.device("cuda")
     in_channels = 17
     model = DUCK_Net(in_channels)
-    epochs, lr = 20, 0.001
+    epochs, lr = 600, 0.0001
 
     model = model.to(device)
 
     writer = SummaryWriter(str(save_dir / "logs"))
     loss_record = AvgMeter()
-    size_rates = [0.75, 1, 1.25]
 
-    iters_per_epoch = len(train_loader.dataset) // 8
+    iters_per_epoch = len(train_loader.dataset) // 4
 
-    optimizer = optim.RMSprop(model.parameters(), lr=0.0001)
+    optimizer = optim.RMSprop(model.parameters(), lr=lr)
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -159,12 +160,13 @@ def main(save_dir, train_loader, val_loader):
 
             img = img.to(device)
             lbl = lbl.to(device)
-            
+
             logits = model(img)
+            
             loss = dice_metric_loss(logits, lbl)
             loss.backward()
 
-            loss_record.update(loss.data, 8)
+            loss_record.update(loss.data, 4)
 
             optimizer.step()
 
@@ -184,7 +186,7 @@ def main(save_dir, train_loader, val_loader):
             if miou > best_mIoU:
                 best_mIoU = miou
                 torch.save(model.state_dict(), save_dir / "best.pth")
-            torch.save(model.state_dict(), save_dir / f"checkpoint{epoch+1}.pth")
+            torch.save(model.state_dict(), save_dir / f"last.pth")
 
             print(f"Current mIoU: {miou} Best mIoU: {best_mIoU}")
 
@@ -195,7 +197,7 @@ def main(save_dir, train_loader, val_loader):
 
 
 if __name__ == "__main__":
-    ds = ["CVC-ClinicDB", "CVC-ColonDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
+    ds = ["CVC-ColonDB", "CVC-ClinicDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
     # ds = ["PolypGen"]
     for _ds in ds:
         print(_ds)
@@ -204,7 +206,7 @@ if __name__ == "__main__":
         save_dir.mkdir(exist_ok=True)
 
         train_path = f"data/Datasets/{_ds}/train/"
-        train_loader, dataset = create_dataloaders(train_path, [352, 352], 8, True)
+        train_loader, dataset = create_dataloaders(train_path, [352, 352], 4, True)
         val_path = f"data/Datasets/{_ds}/validation/"
         val_loader, dataset = create_dataloaders(val_path, [352, 352], 1, False)
 

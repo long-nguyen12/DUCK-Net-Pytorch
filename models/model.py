@@ -36,58 +36,69 @@ class DUCK_Net(nn.Module):
     def __init__(self, in_channels):
         super(DUCK_Net, self).__init__()
 
-        self.conv1 = nn.Conv2d(
-            3, in_channels * 2, kernel_size=2, stride=2, bias=False, padding="valid"
-        )
-        self.conv2 = nn.Conv2d(
-            in_channels * 2,
-            in_channels * 4,
-            kernel_size=2,
-            stride=2,
-            bias=False,
-            padding="valid",
-        )
-        self.conv3 = nn.Conv2d(
-            in_channels * 4,
-            in_channels * 8,
-            kernel_size=2,
-            stride=2,
-            bias=False,
-            padding="valid",
-        )
-        self.conv4 = nn.Conv2d(
-            in_channels * 8,
-            in_channels * 16,
-            kernel_size=2,
-            stride=2,
-            bias=False,
-            padding="valid",
-        )
-        self.conv5 = nn.Conv2d(
-            in_channels * 16,
-            in_channels * 32,
-            kernel_size=2,
-            stride=2,
-            bias=False,
-        )
+        # self.conv1 = nn.Conv2d(
+        #     3, in_channels * 2, kernel_size=2, stride=2, bias=False, padding="valid"
+        # )
+        # self.conv2 = nn.Conv2d(
+        #     in_channels * 2,
+        #     in_channels * 4,
+        #     kernel_size=2,
+        #     stride=2,
+        #     bias=False,
+        #     padding="valid",
+        # )
+        # self.conv3 = nn.Conv2d(
+        #     in_channels * 4,
+        #     in_channels * 8,
+        #     kernel_size=2,
+        #     stride=2,
+        #     bias=False,
+        #     padding="valid",
+        # )
+        # self.conv4 = nn.Conv2d(
+        #     in_channels * 8,
+        #     in_channels * 16,
+        #     kernel_size=2,
+        #     stride=2,
+        #     bias=False,
+        #     padding="valid",
+        # )
+        # self.conv5 = nn.Conv2d(
+        #     in_channels * 16,
+        #     in_channels * 32,
+        #     kernel_size=2,
+        #     stride=2,
+        #     bias=False,
+        # )
+        self.conv1 = Conv2dSamePadding(3, in_channels * 2, kernel_size=2, stride=2)
+        self.conv2 = Conv2dSamePadding(in_channels * 2, in_channels * 4, kernel_size=2, stride=2)
+        self.conv3 = Conv2dSamePadding(in_channels * 4, in_channels * 8, kernel_size=2, stride=2)
+        self.conv4 = Conv2dSamePadding(in_channels * 8, in_channels * 16, kernel_size=2, stride=2)
+        self.conv5 = Conv2dSamePadding(in_channels * 16, in_channels * 32, kernel_size=2, stride=2)
 
         self.t0 = Conv_Block(3, in_channels, "duckv2", layers=1)
 
-        self.l1i = nn.Conv2d(
-            in_channels, in_channels * 2, kernel_size=2, stride=2, padding="valid"
-        )
-        self.l2i = nn.Conv2d(
-            in_channels * 2, in_channels * 4, kernel_size=2, stride=2, padding="valid"
-        )
-        self.l3i = nn.Conv2d(
-            in_channels * 4, in_channels * 8, kernel_size=2, stride=2, padding="valid"
-        )
-        self.l4i = nn.Conv2d(
-            in_channels * 8, in_channels * 16, kernel_size=2, stride=2, padding="valid"
-        )
-        self.l5i = nn.Conv2d(
-            in_channels * 16, in_channels * 32, kernel_size=2, stride=2
-        )
+        self.l1i = Conv2dSamePadding(in_channels, in_channels * 2, kernel_size=2, stride=2)
+        self.l2i = Conv2dSamePadding(in_channels * 2, in_channels * 4, kernel_size=2, stride=2)
+        self.l3i = Conv2dSamePadding(in_channels * 4, in_channels * 8, kernel_size=2, stride=2)
+        self.l4i = Conv2dSamePadding(in_channels * 8, in_channels * 16, kernel_size=2, stride=2)
+        self.l5i = Conv2dSamePadding(in_channels * 16, in_channels * 32, kernel_size=2, stride=2)
+
+        # self.l1i = nn.Conv2d(
+        #     in_channels, in_channels * 2, kernel_size=2, stride=2, padding="valid"
+        # )
+        # self.l2i = nn.Conv2d(
+        #     in_channels * 2, in_channels * 4, kernel_size=2, stride=2, padding="valid"
+        # )
+        # self.l3i = nn.Conv2d(
+        #     in_channels * 4, in_channels * 8, kernel_size=2, stride=2, padding="valid"
+        # )
+        # self.l4i = nn.Conv2d(
+        #     in_channels * 8, in_channels * 16, kernel_size=2, stride=2, padding="valid"
+        # )
+        # self.l5i = nn.Conv2d(
+        #     in_channels * 16, in_channels * 32, kernel_size=2, stride=2
+        # )
 
         self.t1 = Conv_Block(in_channels * 2, in_channels * 2, "duckv2", layers=1)
         self.t2 = Conv_Block(in_channels * 4, in_channels * 4, "duckv2", layers=1)

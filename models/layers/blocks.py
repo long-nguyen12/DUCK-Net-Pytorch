@@ -1,21 +1,59 @@
 from torch import nn
+import torch
+import math
+from functools import reduce
+from operator import __add__
+import torch.nn.functional as F
+
+class Conv2dSamePadding(torch.nn.Conv2d):
+
+    def calc_same_pad(self, i: int, k: int, s: int, d: int) -> int:
+        return max((math.ceil(i / s) - 1) * s + (k - 1) * d + 1 - i, 0)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        ih, iw = x.size()[-2:]
+
+        pad_h = self.calc_same_pad(i=ih, k=self.kernel_size[0], s=self.stride[0], d=self.dilation[0])
+        pad_w = self.calc_same_pad(i=iw, k=self.kernel_size[1], s=self.stride[1], d=self.dilation[1])
+
+        if pad_h > 0 or pad_w > 0:
+            x = F.pad(
+                x, [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2]
+            )
+        return F.conv2d(
+            x,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+        )
 
 
 def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False, padding="same")
+    # return nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False, padding="same")
+    return Conv2dSamePadding(in_planes, out_planes, kernel_size=1)
 
 
 def conv3x3(
     in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
 ) -> nn.Conv2d:
-    return nn.Conv2d(
+    # return nn.Conv2d(
+    #     in_planes,
+    #     out_planes,
+    #     kernel_size=3,
+    #     stride=stride,
+    #     padding="same",
+    #     groups=groups,
+    #     bias=False,
+    #     dilation=dilation,
+    # )
+    return Conv2dSamePadding(
         in_planes,
         out_planes,
         kernel_size=3,
         stride=stride,
-        padding="same",
-        groups=groups,
-        bias=False,
         dilation=dilation,
     )
 
@@ -85,7 +123,7 @@ class Duck_Block(nn.Module):
         x4 = self.res_2(x)
         x5 = self.res_3(x)
         x6 = self.sep(x)
-
+        
         x = x1 + x2 + x3 + x4 + x5 + x6
         x = self.norm_out(x)
         return x
@@ -94,21 +132,33 @@ class Duck_Block(nn.Module):
 class Separated_Conv(nn.Module):
     def __init__(self, in_channels, out_channels, kernel=3):
         super(Separated_Conv, self).__init__()
-        self.conv1n = nn.Conv2d(
+        # self.conv1n = nn.Conv2d(
+        #     in_channels,
+        #     out_channels,
+        #     kernel_size=(1, kernel),
+        #     stride=1,
+        #     padding="same",
+        #     bias=False,
+        # )
+        # self.convn1 = nn.Conv2d(
+        #     out_channels,
+        #     out_channels,
+        #     kernel_size=(kernel, 1),
+        #     stride=1,
+        #     padding="same",
+        #     bias=False,
+        # )
+        self.conv1n = Conv2dSamePadding(
             in_channels,
             out_channels,
             kernel_size=(1, kernel),
-            stride=1,
-            padding="same",
-            bias=False,
+            stride=1
         )
-        self.convn1 = nn.Conv2d(
+        self.convn1 = Conv2dSamePadding(
             out_channels,
             out_channels,
             kernel_size=(kernel, 1),
             stride=1,
-            padding="same",
-            bias=False,
         )
         self.act = nn.ReLU(inplace=True)
         self.norm = nn.BatchNorm2d(out_channels)
@@ -123,22 +173,36 @@ class Separated_Conv(nn.Module):
 class MidScope_Conv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(MidScope_Conv, self).__init__()
-        self.conv33_1 = nn.Conv2d(
+        # self.conv33_1 = nn.Conv2d(
+        #     in_channels,
+        #     out_channels,
+        #     kernel_size=3,
+        #     stride=1,
+        #     padding="same",
+        #     bias=False,
+        #     dilation=1,
+        # )
+        # self.conv33_2 = nn.Conv2d(
+        #     out_channels,
+        #     out_channels,
+        #     kernel_size=3,
+        #     stride=1,
+        #     padding="same",
+        #     bias=False,
+        #     dilation=2,
+        # )
+        self.conv33_1 = Conv2dSamePadding(
             in_channels,
             out_channels,
             kernel_size=3,
             stride=1,
-            padding="same",
-            bias=False,
             dilation=1,
         )
-        self.conv33_2 = nn.Conv2d(
+        self.conv33_2 = Conv2dSamePadding(
             out_channels,
             out_channels,
             kernel_size=3,
             stride=1,
-            padding="same",
-            bias=False,
             dilation=2,
         )
         self.act = nn.ReLU(inplace=True)
@@ -181,6 +245,27 @@ class WideScope_Conv(nn.Module):
             bias=False,
             dilation=3,
         )
+        # self.conv33_1 = Conv2dSamePadding(
+        #     in_channels,
+        #     out_channels,
+        #     kernel_size=3,
+        #     stride=1,
+        #     dilation=1,
+        # )
+        # self.conv33_2 = Conv2dSamePadding(
+        #     out_channels,
+        #     out_channels,
+        #     kernel_size=3,
+        #     stride=1,
+        #     dilation=2,
+        # )
+        # self.conv33_3 = Conv2dSamePadding(
+        #     out_channels,
+        #     out_channels,
+        #     kernel_size=3,
+        #     stride=1,
+        #     dilation=3,
+        # )
         self.act = nn.ReLU(inplace=True)
         self.norm = nn.BatchNorm2d(out_channels)
 
@@ -216,11 +301,19 @@ class DoubleConv(nn.Module):
         super(DoubleConv, self).__init__()
         if not mid_channels:
             mid_channels = out_channels
+        # self.double_conv = nn.Sequential(
+        #     nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+        #     nn.BatchNorm2d(mid_channels),
+        #     nn.ReLU(inplace=True),
+        #     nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+        #     nn.BatchNorm2d(out_channels),
+        #     nn.ReLU(inplace=True),
+        # )
         self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+            Conv2dSamePadding(in_channels, mid_channels, kernel_size=3),
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            Conv2dSamePadding(mid_channels, out_channels, kernel_size=3),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
         )
