@@ -109,12 +109,16 @@ class Duck_Block(nn.Module):
         self.norm = nn.BatchNorm2d(in_channels)
         self.wide = WideScope_Conv(in_channels, out_channels)
         self.mid = MidScope_Conv(in_channels, out_channels)
+        
         self.res_1 = ResNet_Conv(in_channels, out_channels)
+        
         self.res_2 = ResNet_Conv(in_channels, out_channels)
         self.res_2_1 = ResNet_Conv(out_channels, out_channels)
+        
         self.res_3 = ResNet_Conv(in_channels, out_channels)
         self.res_3_1 = ResNet_Conv(out_channels, out_channels)
         self.res_3_2 = ResNet_Conv(out_channels, out_channels)
+        
         self.sep = Separated_Conv(in_channels, out_channels, 6)
         self.norm_out = nn.BatchNorm2d(out_channels)
 
@@ -151,16 +155,17 @@ class Separated_Conv(nn.Module):
         #     padding="same",
         #     bias=False,
         # )
+        self.kernel = 3
         self.conv1n = Conv2dSamePadding(
             in_channels,
             out_channels,
-            kernel_size=(1, kernel),
+            kernel_size=(1, self.kernel),
             stride=1
         )
         self.convn1 = Conv2dSamePadding(
             out_channels,
             out_channels,
-            kernel_size=(kernel, 1),
+            kernel_size=(self.kernel, 1),
             stride=1,
         )
         self.act = nn.ReLU(inplace=True)
@@ -290,8 +295,7 @@ class ResNet_Conv(nn.Module):
         self.act = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        skip = self.conv11(x)
-        skip = self.act(skip)
+        skip = self.act(self.conv11(x))
 
         x = self.norm(self.act(self.conv33_1(x)))
         x = self.norm(self.act(self.conv33_2(x)))

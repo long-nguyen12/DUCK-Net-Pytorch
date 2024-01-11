@@ -105,8 +105,8 @@ class DUCK_Net(nn.Module):
         self.t3 = Conv_Block(in_channels * 8, in_channels * 8, "duckv2", layers=1)
         self.t4 = Conv_Block(in_channels * 16, in_channels * 16, "duckv2", layers=1)
         self.t5_1 = Conv_Block(in_channels * 32, in_channels * 32, "resnet", layers=2)
-        self.t5_3 = Conv_Block(in_channels * 32, in_channels * 32, "resnet", layers=1)
-        self.t5_2 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
+        self.t5_3 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
+        self.t5_2 = Conv_Block(in_channels * 16, in_channels * 16, "resnet", layers=1)
 
         self.q4 = Conv_Block(in_channels * 16, in_channels * 8, "duckv2", layers=1)
         self.q3 = Conv_Block(in_channels * 8, in_channels * 4, "duckv2", layers=1)
