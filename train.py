@@ -14,6 +14,7 @@ import torch.optim as optim
 from val import evaluate
 from tqdm import tqdm
 from PIL import Image
+from torchsummary import summary
 
 PALETTE = [[0, 0, 0], [255, 255, 255]]
 
@@ -95,12 +96,12 @@ class PolypDB(Dataset):
         if self.transform is not None:
             transformed = self.transform(image=image, mask=mask)
 
-            image = transformed["image"] / 255.0
+            image = transformed["image"]
             mask = transformed["mask"]
             return image.float(), mask.argmax(dim=2).long()
 
         else:
-            return image.float() / 255.0, mask.argmax(dim=2).long()
+            return image.float(), mask.argmax(dim=2).long()
 
 
 def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count(), type='train'):
@@ -111,10 +112,10 @@ def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count(), 
         transform = A.Compose(
             [
                 A.Resize(height=image_size[0], width=image_size[1]),
-                A.VerticalFlip(),
-                A.ColorJitter(brightness=(0.6,1.6), contrast=0.2, saturation=0.1, hue=0.01, always_apply=True),
-                A.Affine(scale=(0.5,1.5), translate_percent=(-0.125,0.125), rotate=(-180,180), shear=(-22.5,22), always_apply=True),
-                # A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                # A.VerticalFlip(),
+                # A.ColorJitter(brightness=(0.6,1.6), contrast=0.2, saturation=0.1, hue=0.01, always_apply=True),
+                # A.Affine(scale=(0.5,1.5), translate_percent=(-0.125,0.125), rotate=(-180,180), shear=(-22.5,22), always_apply=True),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 ToTensorV2(),
             ]
         )
@@ -122,6 +123,7 @@ def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count(), 
         transform = A.Compose(
             [
                 A.Resize(height=image_size[0], width=image_size[1]),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 ToTensorV2(),
             ]
         )
@@ -145,9 +147,12 @@ def main(save_dir, train_loader, val_loader):
     device = torch.device("cuda")
     in_channels = 17
     model = DUCK_Net(in_channels)
-    epochs, lr = 600, 0.0001
-
     model = model.to(device)
+    # total_params = sum(p.numel() for p in model.parameters())
+    # print(f"Number of parameters: {total_params}")
+    # summary(model, (3, 352, 352), depth=10)
+    # print(model)
+    epochs, lr = 600, 0.0001
 
     writer = SummaryWriter(str(save_dir / "logs"))
     loss_record = AvgMeter()
@@ -207,7 +212,8 @@ def main(save_dir, train_loader, val_loader):
 
 
 if __name__ == "__main__":
-    ds = ["CVC-ColonDB", "CVC-ClinicDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
+    ds = ["CVC-ColonDB"]
+    # ds = ["CVC-ColonDB", "CVC-ClinicDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
     # ds = ["PolypGen"]
     for _ds in ds:
         print(_ds)

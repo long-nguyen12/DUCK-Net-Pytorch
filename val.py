@@ -12,6 +12,7 @@ import os
 # import albumentations as A
 # from albumentations.pytorch import ToTensorV2
 # from models.datasets.polyp import PolypDB
+from torchvision import utils
 
 PALETTE = [[0, 0, 0], [255, 255, 255]]
 
@@ -33,14 +34,18 @@ def evaluate(model, dataloader, device, folder):
     if not os.path.exists(save_images):
         os.makedirs(save_images)
 
+    count = 0
     for images, labels in tqdm(dataloader):
         images = images.to(device)
         labels = labels.to(device)
         preds = model(images)
         # preds = torch.sigmoid(preds)
-        preds = (preds > 0.5)
+        preds = (preds > 0.5).float()
+        save_path = save_preds + str(count) + "_best.png" 
+        utils.save_image(preds, save_path)
 
         metrics.update(preds, labels)
+        count += 1
 
     miou = metrics.compute_mean_iou()
     mdice = metrics.compute_mean_dice()

@@ -78,7 +78,7 @@ class Conv_Block(nn.Module):
         )
         self.double_conv = DoubleConv(in_channels, out_channels)
         self.block_type = block_type
-        self.layers = layers
+        self.layers = layers    
 
     def forward(self, x):
         result = x
@@ -111,7 +111,10 @@ class Duck_Block(nn.Module):
         self.mid = MidScope_Conv(in_channels, out_channels)
         self.res_1 = ResNet_Conv(in_channels, out_channels)
         self.res_2 = ResNet_Conv(in_channels, out_channels)
+        self.res_2_1 = ResNet_Conv(out_channels, out_channels)
         self.res_3 = ResNet_Conv(in_channels, out_channels)
+        self.res_3_1 = ResNet_Conv(out_channels, out_channels)
+        self.res_3_2 = ResNet_Conv(out_channels, out_channels)
         self.sep = Separated_Conv(in_channels, out_channels, 6)
         self.norm_out = nn.BatchNorm2d(out_channels)
 
@@ -120,8 +123,8 @@ class Duck_Block(nn.Module):
         x1 = self.wide(x)
         x2 = self.mid(x)
         x3 = self.res_1(x)
-        x4 = self.res_2(x)
-        x5 = self.res_3(x)
+        x4 = self.res_2_1(self.res_2(x))
+        x5 = self.res_3_2(self.res_3_1(self.res_3(x)))
         x6 = self.sep(x)
         
         x = x1 + x2 + x3 + x4 + x5 + x6

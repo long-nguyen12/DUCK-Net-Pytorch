@@ -105,8 +105,8 @@ class DUCK_Net(nn.Module):
         self.t3 = Conv_Block(in_channels * 8, in_channels * 8, "duckv2", layers=1)
         self.t4 = Conv_Block(in_channels * 16, in_channels * 16, "duckv2", layers=1)
         self.t5_1 = Conv_Block(in_channels * 32, in_channels * 32, "resnet", layers=2)
-        self.t5_3 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
-        self.t5_2 = Conv_Block(in_channels * 16, in_channels * 16, "resnet", layers=1)
+        self.t5_3 = Conv_Block(in_channels * 32, in_channels * 32, "resnet", layers=1)
+        self.t5_2 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
 
         self.q4 = Conv_Block(in_channels * 16, in_channels * 8, "duckv2", layers=1)
         self.q3 = Conv_Block(in_channels * 8, in_channels * 4, "duckv2", layers=1)
@@ -115,8 +115,9 @@ class DUCK_Net(nn.Module):
         self.z1 = Conv_Block(in_channels, in_channels, "duckv2", layers=1)
 
         self.out = nn.Conv2d(in_channels, 1, kernel_size=1)
+        self.upsample = nn.UpsamplingNearest2d(scale_factor=2)
 
-        self.apply(self._init_weights)
+        # self.apply(self._init_weights)
 
     def forward(self, x):
         p1 = self.conv1(x)
@@ -149,23 +150,23 @@ class DUCK_Net(nn.Module):
         t_53 = self.t5_3(t_51)
         t_52 = self.t5_2(t_53)
 
-        l5_o = F.interpolate(t_52, scale_factor=2, mode="nearest")
+        l5_o = self.upsample(t_52)
         c4 = l5_o + t_4
         q_4 = self.q4(c4)
 
-        l4_o = F.interpolate(q_4, scale_factor=2, mode="nearest")
+        l4_o = self.upsample(q_4)
         c3 = l4_o + t_3
         q_3 = self.q3(c3)
 
-        l3_o = F.interpolate(q_3, scale_factor=2, mode="nearest")
+        l3_o = self.upsample(q_3)
         c2 = l3_o + t_2
         q_2 = self.q2(c2)
 
-        l2_o = F.interpolate(q_2, scale_factor=2, mode="nearest")
+        l2_o = self.upsample(q_2)
         c1 = l2_o + t_1
         q_1 = self.q1(c1)
 
-        l1_o = F.interpolate(q_1, scale_factor=2, mode="nearest")
+        l1_o = self.upsample(q_1)
         c0 = l1_o + t_0
         z_1 = self.z1(c0)
 
