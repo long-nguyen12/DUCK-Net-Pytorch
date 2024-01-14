@@ -5,14 +5,17 @@ import torch
 import math
 import warnings
 
+
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     def norm_cdf(x):
-        return (1. + math.erf(x / math.sqrt(2.))) / 2.
+        return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
 
     if (mean < a - 2 * std) or (mean > b + 2 * std):
-        warnings.warn("mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
-                      "The distribution of values may be incorrect.",
-                      stacklevel=2)
+        warnings.warn(
+            "mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
+            "The distribution of values may be incorrect.",
+            stacklevel=2,
+        )
 
     with torch.no_grad():
         l = norm_cdf((a - mean) / std)
@@ -22,13 +25,14 @@ def _no_grad_trunc_normal_(tensor, mean, std, a, b):
 
         tensor.erfinv_()
 
-        tensor.mul_(std * math.sqrt(2.))
+        tensor.mul_(std * math.sqrt(2.0))
         tensor.add_(mean)
 
         tensor.clamp_(min=a, max=b)
         return tensor
 
-def trunc_normal_(tensor, mean=0., std=1., a=-2., b=2.):
+
+def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
     return _no_grad_trunc_normal_(tensor, mean, std, a, b)
 
 
@@ -36,69 +40,37 @@ class DUCK_Net(nn.Module):
     def __init__(self, in_channels):
         super(DUCK_Net, self).__init__()
 
-        # self.conv1 = nn.Conv2d(
-        #     3, in_channels * 2, kernel_size=2, stride=2, bias=False, padding="valid"
-        # )
-        # self.conv2 = nn.Conv2d(
-        #     in_channels * 2,
-        #     in_channels * 4,
-        #     kernel_size=2,
-        #     stride=2,
-        #     bias=False,
-        #     padding="valid",
-        # )
-        # self.conv3 = nn.Conv2d(
-        #     in_channels * 4,
-        #     in_channels * 8,
-        #     kernel_size=2,
-        #     stride=2,
-        #     bias=False,
-        #     padding="valid",
-        # )
-        # self.conv4 = nn.Conv2d(
-        #     in_channels * 8,
-        #     in_channels * 16,
-        #     kernel_size=2,
-        #     stride=2,
-        #     bias=False,
-        #     padding="valid",
-        # )
-        # self.conv5 = nn.Conv2d(
-        #     in_channels * 16,
-        #     in_channels * 32,
-        #     kernel_size=2,
-        #     stride=2,
-        #     bias=False,
-        # )
         self.conv1 = Conv2dSamePadding(3, in_channels * 2, kernel_size=2, stride=2)
-        self.conv2 = Conv2dSamePadding(in_channels * 2, in_channels * 4, kernel_size=2, stride=2)
-        self.conv3 = Conv2dSamePadding(in_channels * 4, in_channels * 8, kernel_size=2, stride=2)
-        self.conv4 = Conv2dSamePadding(in_channels * 8, in_channels * 16, kernel_size=2, stride=2)
-        self.conv5 = Conv2dSamePadding(in_channels * 16, in_channels * 32, kernel_size=2, stride=2)
+        self.conv2 = Conv2dSamePadding(
+            in_channels * 2, in_channels * 4, kernel_size=2, stride=2
+        )
+        self.conv3 = Conv2dSamePadding(
+            in_channels * 4, in_channels * 8, kernel_size=2, stride=2
+        )
+        self.conv4 = Conv2dSamePadding(
+            in_channels * 8, in_channels * 16, kernel_size=2, stride=2
+        )
+        self.conv5 = Conv2dSamePadding(
+            in_channels * 16, in_channels * 32, kernel_size=2, stride=2
+        )
 
         self.t0 = Conv_Block(3, in_channels, "duckv2", layers=1)
 
-        self.l1i = Conv2dSamePadding(in_channels, in_channels * 2, kernel_size=2, stride=2)
-        self.l2i = Conv2dSamePadding(in_channels * 2, in_channels * 4, kernel_size=2, stride=2)
-        self.l3i = Conv2dSamePadding(in_channels * 4, in_channels * 8, kernel_size=2, stride=2)
-        self.l4i = Conv2dSamePadding(in_channels * 8, in_channels * 16, kernel_size=2, stride=2)
-        self.l5i = Conv2dSamePadding(in_channels * 16, in_channels * 32, kernel_size=2, stride=2)
-
-        # self.l1i = nn.Conv2d(
-        #     in_channels, in_channels * 2, kernel_size=2, stride=2, padding="valid"
-        # )
-        # self.l2i = nn.Conv2d(
-        #     in_channels * 2, in_channels * 4, kernel_size=2, stride=2, padding="valid"
-        # )
-        # self.l3i = nn.Conv2d(
-        #     in_channels * 4, in_channels * 8, kernel_size=2, stride=2, padding="valid"
-        # )
-        # self.l4i = nn.Conv2d(
-        #     in_channels * 8, in_channels * 16, kernel_size=2, stride=2, padding="valid"
-        # )
-        # self.l5i = nn.Conv2d(
-        #     in_channels * 16, in_channels * 32, kernel_size=2, stride=2
-        # )
+        self.l1i = Conv2dSamePadding(
+            in_channels, in_channels * 2, kernel_size=2, stride=2
+        )
+        self.l2i = Conv2dSamePadding(
+            in_channels * 2, in_channels * 4, kernel_size=2, stride=2
+        )
+        self.l3i = Conv2dSamePadding(
+            in_channels * 4, in_channels * 8, kernel_size=2, stride=2
+        )
+        self.l4i = Conv2dSamePadding(
+            in_channels * 8, in_channels * 16, kernel_size=2, stride=2
+        )
+        self.l5i = Conv2dSamePadding(
+            in_channels * 16, in_channels * 32, kernel_size=2, stride=2
+        )
 
         self.t1 = Conv_Block(in_channels * 2, in_channels * 2, "duckv2", layers=1)
         self.t2 = Conv_Block(in_channels * 4, in_channels * 4, "duckv2", layers=1)
@@ -117,7 +89,13 @@ class DUCK_Net(nn.Module):
         self.out = nn.Conv2d(in_channels, 1, kernel_size=1)
         self.upsample = nn.UpsamplingNearest2d(scale_factor=2)
 
-        # self.apply(self._init_weights)
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight.detach())
+                m.bias.detach().zero_()
+            elif isinstance(m, torch.nn.Linear):
+                nn.init.kaiming_normal_(m.weight.detach())
+                m.bias.detach().zero_()
 
     def forward(self, x):
         p1 = self.conv1(x)
@@ -173,19 +151,3 @@ class DUCK_Net(nn.Module):
         x = torch.sigmoid(self.out(z_1))
 
         return x
-    
-    def _init_weights(self, m: nn.Module) -> None:
-        if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=.02)
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.Conv2d):
-            fan_in = m.kernel_size[0] * m.kernel_size[1] * m.in_channels
-            fan_in // m.groups
-            std = math.sqrt(2.0 / fan_in)
-            m.weight.data.normal_(0, std)
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
-        elif isinstance(m, (nn.LayerNorm, nn.BatchNorm2d)):
-            nn.init.ones_(m.weight)
-            nn.init.zeros_(m.bias)

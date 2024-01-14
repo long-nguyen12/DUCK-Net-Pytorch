@@ -4,31 +4,7 @@ import math
 from functools import reduce
 from operator import __add__
 import torch.nn.functional as F
-
-class Conv2dSamePadding(torch.nn.Conv2d):
-
-    def calc_same_pad(self, i: int, k: int, s: int, d: int) -> int:
-        return max((math.ceil(i / s) - 1) * s + (k - 1) * d + 1 - i, 0)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        ih, iw = x.size()[-2:]
-
-        pad_h = self.calc_same_pad(i=ih, k=self.kernel_size[0], s=self.stride[0], d=self.dilation[0])
-        pad_w = self.calc_same_pad(i=iw, k=self.kernel_size[1], s=self.stride[1], d=self.dilation[1])
-
-        if pad_h > 0 or pad_w > 0:
-            x = F.pad(
-                x, [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2]
-            )
-        return F.conv2d(
-            x,
-            self.weight,
-            self.bias,
-            self.stride,
-            self.padding,
-            self.dilation,
-            self.groups,
-        )
+from models.layers.same_conv2d import Conv2dSame as Conv2dSamePadding
 
 
 def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
@@ -68,17 +44,9 @@ class Conv_Block(nn.Module):
         self.res = ResNet_Conv(in_channels, out_channels)
         self.sep = Separated_Conv(in_channels, out_channels, kernel)
         self.duck = Duck_Block(in_channels, out_channels)
-        self.conv = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=(kernel, kernel),
-            stride=1,
-            padding=padding,
-            bias=False,
-        )
         self.double_conv = DoubleConv(in_channels, out_channels)
         self.block_type = block_type
-        self.layers = layers    
+        self.layers = layers
 
     def forward(self, x):
         result = x
@@ -93,8 +61,6 @@ class Conv_Block(nn.Module):
                 result = self.wide(result)
             elif self.block_type == "resnet":
                 result = self.res(result)
-            elif self.block_type == "conv":
-                result = self.conv(result)
             elif self.block_type == "double_convolution":
                 result = self.double_conv(result)
             else:
@@ -109,16 +75,16 @@ class Duck_Block(nn.Module):
         self.norm = nn.BatchNorm2d(in_channels)
         self.wide = WideScope_Conv(in_channels, out_channels)
         self.mid = MidScope_Conv(in_channels, out_channels)
-        
+
         self.res_1 = ResNet_Conv(in_channels, out_channels)
-        
+
         self.res_2 = ResNet_Conv(in_channels, out_channels)
         self.res_2_1 = ResNet_Conv(out_channels, out_channels)
-        
+
         self.res_3 = ResNet_Conv(in_channels, out_channels)
         self.res_3_1 = ResNet_Conv(out_channels, out_channels)
         self.res_3_2 = ResNet_Conv(out_channels, out_channels)
-        
+
         self.sep = Separated_Conv(in_channels, out_channels, 6)
         self.norm_out = nn.BatchNorm2d(out_channels)
 
@@ -130,7 +96,7 @@ class Duck_Block(nn.Module):
         x4 = self.res_2_1(self.res_2(x))
         x5 = self.res_3_2(self.res_3_1(self.res_3(x)))
         x6 = self.sep(x)
-        
+
         x = x1 + x2 + x3 + x4 + x5 + x6
         x = self.norm_out(x)
         return x
@@ -157,10 +123,7 @@ class Separated_Conv(nn.Module):
         # )
         self.kernel = 3
         self.conv1n = Conv2dSamePadding(
-            in_channels,
-            out_channels,
-            kernel_size=(1, self.kernel),
-            stride=1
+            in_channels, out_channels, kernel_size=(1, self.kernel), stride=1
         )
         self.convn1 = Conv2dSamePadding(
             out_channels,
