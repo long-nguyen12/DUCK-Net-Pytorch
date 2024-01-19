@@ -6,35 +6,8 @@ import math
 import warnings
 
 
-def _no_grad_trunc_normal_(tensor, mean, std, a, b):
-    def norm_cdf(x):
-        return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
-
-    if (mean < a - 2 * std) or (mean > b + 2 * std):
-        warnings.warn(
-            "mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
-            "The distribution of values may be incorrect.",
-            stacklevel=2,
-        )
-
-    with torch.no_grad():
-        l = norm_cdf((a - mean) / std)
-        u = norm_cdf((b - mean) / std)
-
-        tensor.uniform_(2 * l - 1, 2 * u - 1)
-
-        tensor.erfinv_()
-
-        tensor.mul_(std * math.sqrt(2.0))
-        tensor.add_(mean)
-
-        tensor.clamp_(min=a, max=b)
-        return tensor
-
-
-def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
-    return _no_grad_trunc_normal_(tensor, mean, std, a, b)
-
+def UpsamplingNearest2d(x, scale_factor=2, mode='nearest'):
+    return F.interpolate(x, scale_factor=scale_factor, mode=mode)
 
 class DUCK_Net(nn.Module):
     def __init__(self, in_channels):
@@ -77,7 +50,7 @@ class DUCK_Net(nn.Module):
         self.t3 = Conv_Block(in_channels * 8, in_channels * 8, "duckv2", layers=1)
         self.t4 = Conv_Block(in_channels * 16, in_channels * 16, "duckv2", layers=1)
         self.t5_1 = Conv_Block(in_channels * 32, in_channels * 32, "resnet", layers=2)
-        self.t5_3 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
+        # self.t5_3 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
         self.t5_2 = Conv_Block(in_channels * 16, in_channels * 16, "resnet", layers=1)
 
         self.q4 = Conv_Block(in_channels * 16, in_channels * 8, "duckv2", layers=1)
@@ -87,14 +60,13 @@ class DUCK_Net(nn.Module):
         self.z1 = Conv_Block(in_channels, in_channels, "duckv2", layers=1)
 
         self.out = nn.Conv2d(in_channels, 1, kernel_size=1)
-        self.upsample = nn.UpsamplingNearest2d(scale_factor=2)
 
         for m in self.modules():
             if isinstance(m, torch.nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight.detach())
+                nn.init.kaiming_normal_(m.weight, mode='fan_in')
                 m.bias.detach().zero_()
             elif isinstance(m, torch.nn.Linear):
-                nn.init.kaiming_normal_(m.weight.detach())
+                nn.init.kaiming_normal_(m.weight, mode='fan_in')
                 m.bias.detach().zero_()
 
     def forward(self, x):
@@ -105,7 +77,6 @@ class DUCK_Net(nn.Module):
         p5 = self.conv5(p4)
 
         t_0 = self.t0(x)
-
         l1_i = self.l1i(t_0)
         s_1 = p1 + l1_i
         t_1 = self.t1(s_1)
@@ -125,26 +96,26 @@ class DUCK_Net(nn.Module):
         l5_i = self.l5i(t_4)
         s_5 = p5 + l5_i
         t_51 = self.t5_1(s_5)
-        t_53 = self.t5_3(t_51)
-        t_52 = self.t5_2(t_53)
+        # t_53 = self.t5_3(t_51)
+        t_52 = self.t5_2(t_51)
 
-        l5_o = self.upsample(t_52)
+        l5_o = UpsamplingNearest2d(t_52)
         c4 = l5_o + t_4
         q_4 = self.q4(c4)
 
-        l4_o = self.upsample(q_4)
+        l4_o = UpsamplingNearest2d(q_4)
         c3 = l4_o + t_3
         q_3 = self.q3(c3)
 
-        l3_o = self.upsample(q_3)
+        l3_o = UpsamplingNearest2d(q_3)
         c2 = l3_o + t_2
         q_2 = self.q2(c2)
 
-        l2_o = self.upsample(q_2)
+        l2_o = UpsamplingNearest2d(q_2)
         c1 = l2_o + t_1
         q_1 = self.q1(c1)
 
-        l1_o = self.upsample(q_1)
+        l1_o = UpsamplingNearest2d(q_1)
         c0 = l1_o + t_0
         z_1 = self.z1(c0)
 

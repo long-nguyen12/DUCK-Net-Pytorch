@@ -8,23 +8,12 @@ from models.layers.same_conv2d import Conv2dSame as Conv2dSamePadding
 
 
 def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
-    # return nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False, padding="same")
-    return Conv2dSamePadding(in_planes, out_planes, kernel_size=1)
+    return Conv2dSamePadding(in_planes, out_planes, kernel_size=1, padding=0)
 
 
 def conv3x3(
     in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
 ) -> nn.Conv2d:
-    # return nn.Conv2d(
-    #     in_planes,
-    #     out_planes,
-    #     kernel_size=3,
-    #     stride=stride,
-    #     padding="same",
-    #     groups=groups,
-    #     bias=False,
-    #     dilation=dilation,
-    # )
     return Conv2dSamePadding(
         in_planes,
         out_planes,
@@ -68,6 +57,25 @@ class Conv_Block(nn.Module):
 
         return result
 
+class ConvBlock2D(nn.Module):
+    def __init__(self, filters, block_type, repeat=1):
+        super(ConvBlock2D, self).__init__()
+        self.repeat = repeat
+        self.layers = nn.ModuleList()
+
+        for i in range(repeat):
+            if block_type == 'duckv2':
+                self.layers.append(Duck_Block(filters))
+            elif block_type == 'resnet':
+                self.layers.append(ResNet_Conv(filters))
+            else:
+                raise ValueError(f"Unsupported block_type: {block_type}")
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
 
 class Duck_Block(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -105,30 +113,13 @@ class Duck_Block(nn.Module):
 class Separated_Conv(nn.Module):
     def __init__(self, in_channels, out_channels, kernel=3):
         super(Separated_Conv, self).__init__()
-        # self.conv1n = nn.Conv2d(
-        #     in_channels,
-        #     out_channels,
-        #     kernel_size=(1, kernel),
-        #     stride=1,
-        #     padding="same",
-        #     bias=False,
-        # )
-        # self.convn1 = nn.Conv2d(
-        #     out_channels,
-        #     out_channels,
-        #     kernel_size=(kernel, 1),
-        #     stride=1,
-        #     padding="same",
-        #     bias=False,
-        # )
-        self.kernel = 3
         self.conv1n = Conv2dSamePadding(
-            in_channels, out_channels, kernel_size=(1, self.kernel), stride=1
+            in_channels, out_channels, kernel_size=(1, kernel), stride=1
         )
         self.convn1 = Conv2dSamePadding(
             out_channels,
             out_channels,
-            kernel_size=(self.kernel, 1),
+            kernel_size=(kernel, 1),
             stride=1,
         )
         self.act = nn.ReLU(inplace=True)
@@ -144,24 +135,6 @@ class Separated_Conv(nn.Module):
 class MidScope_Conv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(MidScope_Conv, self).__init__()
-        # self.conv33_1 = nn.Conv2d(
-        #     in_channels,
-        #     out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     padding="same",
-        #     bias=False,
-        #     dilation=1,
-        # )
-        # self.conv33_2 = nn.Conv2d(
-        #     out_channels,
-        #     out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     padding="same",
-        #     bias=False,
-        #     dilation=2,
-        # )
         self.conv33_1 = Conv2dSamePadding(
             in_channels,
             out_channels,
@@ -189,33 +162,6 @@ class MidScope_Conv(nn.Module):
 class WideScope_Conv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(WideScope_Conv, self).__init__()
-        # self.conv33_1 = nn.Conv2d(
-        #     in_channels,
-        #     out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     bias=False,
-        #     dilation=1,
-        #     padding="same",
-        # )
-        # self.conv33_2 = nn.Conv2d(
-        #     out_channels,
-        #     out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     padding="same",
-        #     bias=False,
-        #     dilation=2,
-        # )
-        # self.conv33_3 = nn.Conv2d(
-        #     out_channels,
-        #     out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     padding="same",
-        #     bias=False,
-        #     dilation=3,
-        # )
         self.conv33_1 = Conv2dSamePadding(
             in_channels,
             out_channels,
@@ -269,21 +215,11 @@ class ResNet_Conv(nn.Module):
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels, mid_channels=None):
         super(DoubleConv, self).__init__()
-        if not mid_channels:
-            mid_channels = out_channels
-        # self.double_conv = nn.Sequential(
-        #     nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-        #     nn.BatchNorm2d(mid_channels),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
-        #     nn.BatchNorm2d(out_channels),
-        #     nn.ReLU(inplace=True),
-        # )
         self.double_conv = nn.Sequential(
-            Conv2dSamePadding(in_channels, mid_channels, kernel_size=3),
-            nn.BatchNorm2d(mid_channels),
+            Conv2dSamePadding(in_channels, out_channels, kernel_size=3),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
-            Conv2dSamePadding(mid_channels, out_channels, kernel_size=3),
+            Conv2dSamePadding(out_channels, out_channels, kernel_size=3),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
         )

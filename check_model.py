@@ -16,8 +16,6 @@ def main(cfg):
     model = eval(model_cfg['NAME'])(model_cfg['BACKBONE'], 2)
     model.init_pretrained(model_cfg['PRETRAINED'])
     model = model.to(device)
-    total_params = sum(p.numel() for p in model.parameters())
-    print(f"Number of parameters: {total_params}")
 
     input_tensor = torch.randn(1, 3, 352, 352).to(device)
 
