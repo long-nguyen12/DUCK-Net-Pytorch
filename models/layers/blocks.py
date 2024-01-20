@@ -193,7 +193,7 @@ class WideScope_Conv(nn.Module):
 
         return x
 
-
+    
 class ResNet_Conv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(ResNet_Conv, self).__init__()

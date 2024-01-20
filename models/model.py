@@ -50,7 +50,7 @@ class DUCK_Net(nn.Module):
         self.t3 = Conv_Block(in_channels * 8, in_channels * 8, "duckv2", layers=1)
         self.t4 = Conv_Block(in_channels * 16, in_channels * 16, "duckv2", layers=1)
         self.t5_1 = Conv_Block(in_channels * 32, in_channels * 32, "resnet", layers=2)
-        # self.t5_3 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
+        self.t5_3 = Conv_Block(in_channels * 32, in_channels * 16, "resnet", layers=1)
         self.t5_2 = Conv_Block(in_channels * 16, in_channels * 16, "resnet", layers=1)
 
         self.q4 = Conv_Block(in_channels * 16, in_channels * 8, "duckv2", layers=1)
@@ -96,8 +96,8 @@ class DUCK_Net(nn.Module):
         l5_i = self.l5i(t_4)
         s_5 = p5 + l5_i
         t_51 = self.t5_1(s_5)
-        # t_53 = self.t5_3(t_51)
-        t_52 = self.t5_2(t_51)
+        t_53 = self.t5_3(t_51)
+        t_52 = self.t5_2(t_53)
 
         l5_o = UpsamplingNearest2d(t_52)
         c4 = l5_o + t_4
