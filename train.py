@@ -68,7 +68,6 @@ class PolypDB(Dataset):
 
         img_path = Path(root) / "images"
         self.files = list(img_path.glob("*.jpg"))
-        # self.files = self.files[0:10]
         if not self.files:
             raise Exception(f"No images found in {img_path}")
         print(f"Found {len(self.files)} images.")
@@ -91,33 +90,26 @@ class PolypDB(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         mask = cv2.imread(lbl_path, 0)
-        mask = mask[:,:,np.newaxis]
-        mask = mask.astype('float32') /255
-        # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
-        # mask = self.convert_to_mask(mask)
+        mask = mask[:, :, np.newaxis]
+        mask = mask.astype("float32") / 255
         if self.transform is not None:
             transformed = self.transform(image=image, mask=mask)
 
             image = transformed["image"]
             mask = transformed["mask"]
-            # mask = mask.argmax(dim=2).long()
-            # trans = torchvision.transforms.ToPILImage()
-            # out = trans(mask.permute(2, 0, 1))
-            # out.show()
-            # np_mask = mask.numpy()
-            # pillow_image = Image.fromarray(np_mask)
-            # pillow_image.show()
             return image.float(), mask.permute(2, 0, 1)
 
         else:
             return image.float(), mask.argmax(dim=2).long()
 
 
-def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count(), type='train'):
+def create_dataloaders(
+    dir, image_size, batch_size, num_workers=os.cpu_count(), type="train"
+):
     if isinstance(image_size, int):
         image_size = [image_size, image_size]
 
-    if type == 'train':
+    if type == "train":
         transform = A.Compose(
             [
                 A.Resize(height=image_size[0], width=image_size[1]),
@@ -136,7 +128,7 @@ def create_dataloaders(dir, image_size, batch_size, num_workers=os.cpu_count(), 
                 ToTensorV2(),
             ]
         )
-    
+
     dataset = PolypDB(root=dir, transform=transform)
 
     dataloader = torch.utils.data.DataLoader(
@@ -186,7 +178,7 @@ def main(save_dir, train_loader, val_loader):
             lbl = lbl.to(device)
 
             logits = model(img)
-            
+
             loss = dice_metric_loss(logits, lbl)
             loss.backward()
 
@@ -231,8 +223,10 @@ if __name__ == "__main__":
         save_dir.mkdir(exist_ok=True)
 
         train_path = f"data/Datasets/{_ds}/train/"
-        train_loader, dataset = create_dataloaders(train_path, [352, 352], 4, True, 'train')
+        train_loader, dataset = create_dataloaders(
+            train_path, [352, 352], 4, True, "train"
+        )
         val_path = f"data/Datasets/{_ds}/validation/"
-        val_loader, dataset = create_dataloaders(val_path, [352, 352], 1, False, 'val')
+        val_loader, dataset = create_dataloaders(val_path, [352, 352], 1, False, "val")
 
         main(save_dir, train_loader, val_loader)
