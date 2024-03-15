@@ -1,21 +1,20 @@
-import albumentations as A
-import torch
-import torch.nn.functional as F
-from albumentations.pytorch import ToTensorV2
-from models.model import *
-import cv2
-import numpy as np
-from torch.utils.data import Dataset
-from pathlib import Path
 import os
 import time
-from torch.utils.tensorboard import SummaryWriter
+from pathlib import Path
+
+import albumentations as A
+import cv2
+import numpy as np
+import torch
 import torch.optim as optim
-from val import evaluate
+from albumentations.pytorch import ToTensorV2
+from torch.utils.data import Dataset
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from PIL import Image
-from torchsummary import summary
-import torchvision
+
+from models.model import *
+from models.model import DUCK_Net
+from val import evaluate
 
 PALETTE = [[0, 0, 0], [255, 255, 255]]
 
@@ -72,14 +71,6 @@ class PolypDB(Dataset):
             raise Exception(f"No images found in {img_path}")
         print(f"Found {len(self.files)} images.")
 
-    @staticmethod
-    def convert_to_mask(mask):
-        h, w = mask.shape[:2]
-        seg_mask = np.zeros((h, w, len(PALETTE)))
-        for i, label in enumerate(PALETTE):
-            seg_mask[:, :, i] = np.all(mask == label, axis=-1)
-        return seg_mask
-
     def __len__(self):
         return len(self.files)
 
@@ -113,10 +104,22 @@ def create_dataloaders(
         transform = A.Compose(
             [
                 A.Resize(height=image_size[0], width=image_size[1]),
-                # A.VerticalFlip(),
-                # A.ColorJitter(brightness=(0.6,1.6), contrast=0.2, saturation=0.1, hue=0.01, always_apply=True),
-                # A.Affine(scale=(0.5,1.5), translate_percent=(-0.125,0.125), rotate=(-180,180), shear=(-22.5,22), always_apply=True),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                A.HorizontalFlip(),
+                A.VerticalFlip(),
+                A.ColorJitter(
+                    brightness=(0.6, 1.6),
+                    contrast=0.2,
+                    saturation=0.1,
+                    hue=0.01,
+                    always_apply=True,
+                ),
+                A.Affine(
+                    scale=(0.5, 1.5),
+                    translate_percent=(-0.125, 0.125),
+                    rotate=(-180, 180),
+                    shear=(-22.5, 22),
+                    always_apply=True,
+                ),
                 ToTensorV2(),
             ]
         )
@@ -124,7 +127,6 @@ def create_dataloaders(
         transform = A.Compose(
             [
                 A.Resize(height=image_size[0], width=image_size[1]),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 ToTensorV2(),
             ]
         )
@@ -149,10 +151,7 @@ def main(save_dir, train_loader, val_loader):
     in_channels = 17
     model = DUCK_Net(in_channels)
     model = model.to(device)
-    # total_params = sum(p.numel() for p in model.parameters())
-    # print(f"Number of parameters: {total_params}")
-    # summary(model, (3, 352, 352), depth=10)
-    # print(model)
+
     epochs, lr = 600, 0.0001
 
     writer = SummaryWriter(str(save_dir / "logs"))
@@ -213,9 +212,7 @@ def main(save_dir, train_loader, val_loader):
 
 
 if __name__ == "__main__":
-    ds = ["CVC-ColonDB"]
-    # ds = ["CVC-ColonDB", "CVC-ClinicDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
-    # ds = ["PolypGen"]
+    ds = ["CVC-ColonDB", "CVC-ClinicDB", "ETIS-LaribPolypDB", "Kvasir-SEG"]
     for _ds in ds:
         print(_ds)
         save_path = f"results/DUCK-Net/{_ds}"
