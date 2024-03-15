@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from models.model import *
 from models.model import DUCK_Net
-from val import evaluate
+from val import inference
 
 PALETTE = [[0, 0, 0], [255, 255, 255]]
 
@@ -196,7 +196,9 @@ def main(save_dir, train_loader, val_loader):
         torch.cuda.empty_cache()
 
         if epoch % 10 == 0 or epoch == epochs:
-            miou = evaluate(model, val_loader, device, "Training")[0]
+            miou, mean_dice, mean_precision, mean_recall = inference(
+                model, f"{save_dir}/{_ds}/test/"
+            )
 
             if miou > best_mIoU:
                 best_mIoU = miou
