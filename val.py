@@ -28,7 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         mask = cv2.imread(mask_path, 0)
 
         mask = mask[:, :, np.newaxis]
-        mask = mask.astype("float32") / 255
+        mask = mask.astype("float32")
         if self.transform is not None:
             augmented = self.transform(image=image, mask=mask)
             image = augmented["image"]
@@ -99,7 +99,7 @@ def get_scores(gts, prs):
 
 
 @torch.no_grad()
-def inference(model, data_path, args=None):
+def inference(model, data_path):
     print("#" * 20)
     torch.cuda.empty_cache()
     model.eval()
@@ -128,9 +128,8 @@ def inference(model, data_path, args=None):
 
         image = image.to(device)
         gt = gt.to(device)
-        res, _, _, _, _ = model(image)
-
-        pr = torch.sigmoid(res)
+        res = model(image)
+        pr = res
         pr = (pr > 0.5).float()
         gts.append(gt)
         prs.append(pr)
